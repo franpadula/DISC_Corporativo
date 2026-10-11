@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test DISC Profesional</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --rojo: #ef4444;
+            --amarillo: #eab308;
+            --verde: #22c55e;
+            --azul: #3b82f6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 { color: var(--text); }
+        .progress-bar {
+            width: 100%;
+            background-color: var(--border);
+            border-radius: 8px;
+            height: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .question-block {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .option-label:hover { background-color: #f1f5f9; }
+        input[type="radio"] { margin-right: 15px; transform: scale(1.2); }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .results-container { display: none; }
+        .result-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .result-label { width: 150px; font-weight: bold; }
+        .result-track {
+            flex-grow: 1;
+            height: 20px;
+            background-color: var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-right: 15px;
+        }
+        .result-fill { height: 100%; }
+        .bg-rojo { background-color: var(--rojo); }
+        .bg-amarillo { background-color: var(--amarillo); }
+        .bg-verde { background-color: var(--verde); }
+        .bg-azul { background-color: var(--azul); }
+        .profile-desc { margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px; border-left: 4px solid var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="intro-screen">
+        <h1>Test de Personalidad y Liderazgo DISC</h1>
+        <p>Este test consta de 50 preguntas divididas en bloques de 5. Selecciona la opción que mejor describa tu comportamiento natural en el entorno laboral.</p>
+        <button onclick="startTest()">Comenzar Test</button>
+    </div>
+
+    <div id="test-screen" style="display: none;">
+        <h2 id="block-title">Bloque 1/10</h2>
+        <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+        <div id="questions-container"></div>
+        <button id="next-btn" onclick="nextBlock()" disabled>Siguiente Bloque</button>
+    </div>
+
+    <div id="results-screen" class="results-container">
+        <h1>Tus Resultados DISC</h1>
+        <div id="chart-container"></div>
+        <div id="profile-analysis" class="profile-desc"></div>
+        <button onclick="location.reload()" style="margin-top: 20px;">Repetir Test</button>
+    </div>
+</div>
+
+<script>
+    // Base de datos de 50 preguntas. A=Rojo, B=Amarillo, C=Verde, D=Azul
+    const allQuestions = [
+        { q: "1. En una reunión surge un problema imprevisto. Tu reacción es:", opts: { D: "Tomar el control de la situación y decidir rápido.", I: "Animar al equipo y buscar ideas creativas.", S: "Escuchar opiniones para asegurar consenso.", C: "Pedir un momento para analizar los datos." } },
+        { q: "2. Al empezar un proyecto nuevo, ¿qué necesitas saber?", opts: { D: "Cuál es el objetivo final y la fecha límite.", I: "Con quién trabajaré y si será dinámico.", S: "Cuál es el paso a paso y saber que tendré apoyo.", C: "Dónde está la documentación y reglas." } },
+        { q: "3. Si surge un conflicto directo con un compañero:", opts: { D: "Lo confronto directamente para resolverlo ya.", I: "Lo suavizo con tacto o humor.", S: "Mantengo la calma y a veces cedo un poco.", C: "Me baso estrictamente en hechos objetivos." } },
+        { q: "4. ¿Cómo prefieres que sea tu ritmo de trabajo?", opts: { D: "Rápido, lleno de retos y orientado a resultados.", I: "Dinámico, interactuando con personas.", S: "Predecible y estable, sin presión.", C: "Sistemático y estructurado, con calidad." } },
+        { q: "5. ¿Qué tipo de reconocimiento valoras más?", opts: { D: "Logro de metas y liderazgo.", I: "Entusiasmo y aportes públicos.", S: "Constancia y apoyo al equipo en privado.", C: "Precisión y perfección técnica." } },
+        { q: "6. A la hora de tomar una decisión importante, tu enfoque es:", opts: { D: "Decidir rápido asumiendo riesgos.", I: "Confiar en la intuición y el entusiasmo.", S: "Buscar consenso y evitar cambios bruscos.", C: "Analizar todos los datos y variables." } },
+        { q: "7. ¿Cómo sueles comunicarte por chat de trabajo?", opts: { D: "Directo, al grano y muy breve.", I: "Expresivo, amistoso y cercano.", S: "Amable, asegurando alineación.", C: "Detallado, con información técnica." } },
+        { q: "8. Cuando cometes un error en el trabajo:", opts: { D: "Me frustra el retraso, pero enfoco la solución rápido.", I: "Quito hierro al asunto para no bajar la moral.", S: "Me preocupa cómo afecta a otros.", C: "Analizo qué falló en la regla para evitarlo." } },
+        { q: "9. El rol de equipo con el que te sientes más cómodo:", opts: { D: "El que marca dirección y asume liderazgo.", I: "El que aporta energía y nuevas ideas.", S: "El que da soporte y mantiene la armonía.", C: "El experto que asegura el rigor." } },
+        { q: "10. Ante un cambio repentino en procedimientos:", opts: { D: "Lo adopto de inmediato si me hace eficiente.", I: "Me entusiasma si rompe la rutina.", S: "Me incomoda, necesito tiempo para adaptarme.", C: "Lo cuestiono hasta entender la lógica." } },
+        { q: "11. Actitud frente a normas estrictas:", opts: { D: "Son sugerencias; a veces hay que saltarlas.", I: "Me aburren, prefiero flexibilidad.", S: "Dan seguridad y prefiero respetarlas.", C: "Son fundamentales y deben cumplirse." } },
+        { q: "12. Para aprender un software nuevo:", opts: { D: "Pruebo botones directamente para ir al grano.", I: "Pregunto a un compañero que me cuente.", S: "Que alguien me enseñe con paciencia paso a paso.", C: "Leo el manual y documentación técnica." } },
+        { q: "13. Bajo mucha presión cambias hacia:", opts: { D: "Impaciente, exigente y autoritario.", I: "Desorganizado, hablo demasiado o me emociono.", S: "Me cierro y evito el conflicto.", C: "Me aíslo, me vuelvo crítico y perfeccionista." } },
+        { q: "14. Tu espacio de trabajo ideal:", opts: { D: "Funcional y práctico, solo lo necesario.", I: "Llamativo o un poco desordenado, cosas motivadoras.", S: "Acogedor, personal y tranquilo.", C: "Minimalista y organizado milimétricamente." } },
+        { q: "15. Al delegar una tarea importante:", opts: { D: "Quiero que se haga rápido y traigan resultados.", I: "Que la persona esté motivada.", S: "No sobrecargar y dar mi apoyo.", C: "Que no cometan errores y sigan el procedimiento." } },
+        { q: "16. Ante críticas sobre tu trabajo:", opts: { D: "Defiendo mi postura con firmeza y resultados.", I: "Me lo tomo personal pero salgo con optimismo.", S: "Lo acepto tranquilo, me preocupa la relación.", C: "Pido datos exactos para ver si tiene lógica." } },
+        { q: "17. Al organizar un evento de equipo:", opts: { D: "Tomo decisiones rápidas de directrices.", I: "Propongo actividades divertidas.", S: "Busco que todos estén cómodos y relajados.", C: "Hago un itinerario logístico detallado." } },
+        { q: "18. Lo que más te motiva a trabajar:", opts: { D: "Superar retos y tener el control.", I: "El reconocimiento y la visibilidad.", S: "Sentir que ayudo genuinamente al equipo.", C: "El trabajo bien hecho y adquirir conocimiento." } },
+        { q: "19. Gestión del tiempo en un día normal:", opts: { D: "Centrado en urgencias, quiero hacerlo rápido.", I: "Fluida, a veces pierdo la noción del tiempo.", S: "Constante, sin prisas, una cosa a la vez.", C: "Meticulosa, sigo plazos y busco perfección." } },
+        { q: "20. En una presentación a directivos:", opts: { D: "Directo al grano, destacando beneficios.", I: "Visual, entusiasta contando una historia.", S: "Pausada, destacando el esfuerzo del equipo.", C: "Datos exhaustivos y gráficos precisos." } },
+        { q: "21. A la hora de asumir riesgos:", opts: { D: "Tomo decisiones audaces si la recompensa es alta.", I: "Me arriesgo si la idea suena emocionante.", S: "Los evito para no desestabilizar.", C: "Los acepto solo si los he analizado a fondo." } },
+        { q: "22. En las reuniones de equipo:", opts: { D: "Quiero que sean cortas y al grano.", I: "Disfruto el brainstorming y charlar.", S: "Prefiero escuchar y tomar nota en calma.", C: "Exijo agenda previa y datos preparados." } },
+        { q: "23. Ante una tarea nueva sin formación:", opts: { D: "Me lanzo a la acción y resuelvo sobre la marcha.", I: "Busco colaborar e intercambiar ideas.", S: "Pido instrucciones y tiempo razonable.", C: "Investigo a fondo el contexto antes de actuar." } },
+        { q: "24. Tu mayor frustración laboral sería:", opts: { D: "Perder el control o fracasar en objetivos.", I: "El rechazo social o el aburrimiento.", S: "La inestabilidad y cambios constantes.", C: "Hacer trabajo de mala calidad o con errores." } },
+        { q: "25. En un debate sobre el futuro del área, argumentas con:", opts: { D: "Retorno de inversión a corto plazo.", I: "El potencial de innovación y motivación.", S: "El bienestar de la plantilla y ritmo sostenible.", C: "Estudios de viabilidad y datos históricos." } },
+        { q: "26. Para mediar en un conflicto:", opts: { D: "Impongo solución rápida para no perder tiempo.", I: "Fomento charla abierta y optimismo.", S: "Escucho con paciencia buscando punto medio.", C: "Analizo objetivamente hechos para dictaminar." } },
+        { q: "27. Sobre saltarse normas establecidas:", opts: { D: "Si frenan el resultado, hay que ignorarlas.", I: "Me las salto si tengo una idea mejor.", S: "Prefiero no hacerlo para mantener estabilidad.", C: "Es inaceptable, existen para garantizar calidad." } },
+        { q: "28. Tu líder ideal es:", opts: { D: "Directo, que me dé autonomía y valore resultados.", I: "Inspirador, comunicativo y divertido.", S: "Cercano, paciente y de apoyo constante.", C: "Justo, estructurado y de alto rigor técnico." } },
+        { q: "29. Frente a tareas rutinarias:", opts: { D: "Las automatizo o delego rápido.", I: "Me aburro y necesito estímulos.", S: "Las hago con calma, me dan tranquilidad.", C: "Aprovecho para asegurar que no haya fallos." } },
+        { q: "30. Para convencer a otros de tu idea:", opts: { D: "Me apoyo en beneficios directos y rapidez.", I: "Transmito entusiasmo y visión atractiva.", S: "Demuestro que es segura y no causará problemas.", C: "Aporto evidencias sólidas y viabilidad." } },
+        { q: "31. Al delegar, tu estilo es:", opts: { D: "Exijo resultados rápidos sin meterme en el cómo.", I: "Doy margen para creatividad y animo.", S: "Explico pacientemente ofreciendo ayuda.", C: "Doy instrucciones detalladas por escrito." } },
+        { q: "32. Ante un fracaso rotundo:", opts: { D: "Me molesto pero busco solución pragmática ya.", I: "Intento relativizar e improvisar alternativas.", S: "Busco restaurar la tranquilidad del equipo.", C: "Hago auditoría profunda para encontrar el fallo." } },
+        { q: "33. La mejor recompensa profesional:", opts: { D: "Poder, autoridad y autonomía.", I: "Reconocimiento público y buen ambiente.", S: "Estabilidad a largo plazo y sentirnos familia.", C: "Reconocimiento técnico y calidad." } },
+        { q: "34. ¿Cómo te perciben al conocerte?", opts: { D: "Decidido, directo y algo impaciente.", I: "Carismático, hablador y entusiasta.", S: "Tranquilo, amable y buen oyente.", C: "Analítico, formal y reservado." } },
+        { q: "35. En un proyecto complejo, la prioridad es:", opts: { D: "Entregar antes de la fecha, cueste lo que cueste.", I: "Que sea innovador y el equipo disfrute.", S: "No generar estrés y avanzar a ritmo constante.", C: "Producto impecable sin un error, aunque tarde." } },
+        { q: "36. Ante un cambio de planes de última hora:", opts: { D: "Es un reto, ajusto rápido y arranco.", I: "Animo al equipo para que no decaiga.", S: "Me preocupa la inestabilidad que genera.", C: "Pido nuevos requerimientos exactos por escrito." } },
+        { q: "37. Al revisar trabajo ajeno sueles ser:", opts: { D: "Directo con lo que está mal para arreglo rápido.", I: "Positivo, destacando lo bueno y motivando.", S: "Constructivo, ofreciendo mi ayuda práctica.", C: "Exhaustivo, señalando cada mínimo error." } },
+        { q: "38. En eventos sociales de empresa:", opts: { D: "Hablo de negocios o me voy si no aporta.", I: "Me mezclo con todos y hablo bastante.", S: "Me quedo con mi grupo de confianza.", C: "Los evito o hablo de temas técnicos." } },
+        { q: "39. Cuando tu motivación baja:", opts: { D: "Necesito ver resultados parciales tangibles.", I: "Un cambio de aires o brainstorming.", S: "Rutina estable y saber que el equipo está bien.", C: "Organizar mejor tareas y revisar datos." } },
+        { q: "40. Con instrucciones muy ambiguas:", opts: { D: "Defino el rumbo y tomo las riendas.", I: "Hablo con varios para inspirarme.", S: "Pido orientación amable para ir seguro.", C: "Me frustra, exijo aclarar especificaciones." } },
+        { q: "41. En tu evaluación anual, te enorgullece:", opts: { D: "KPIs alcanzados e impacto en negocio.", I: "Motivación al equipo y clima laboral.", S: "Fiabilidad, lealtad y ayuda a compañeros.", C: "Alta calidad, rigor y cero errores." } },
+        { q: "42. Al conocer un nuevo cliente:", opts: { D: "Directo al grano de lo que vamos a hacer.", I: "Muy sociable, rompiendo el hielo rápido.", S: "Amable pero construyendo confianza poco a poco.", C: "Formal, centrado en competencias técnicas." } },
+        { q: "43. Si un proceso es inevitablemente lento:", opts: { D: "Me impaciento y presiono o busco atajos.", I: "Me aburro y me pongo a hacer algo divertido.", S: "Lo acepto con calma, es parte de la rutina.", C: "Aprovecho para revisar todo a fondo." } },
+        { q: "44. Tras lograr un gran éxito:", opts: { D: "Pienso casi de inmediato en el próximo reto.", I: "Lo celebro a lo grande con el equipo.", S: "Agradezco el esfuerzo y disfruto la paz.", C: "Analizo qué hicimos bien para documentarlo." } },
+        { q: "45. Con tareas urgentes sin orden:", opts: { D: "Tomo control, decido rápido y arranco.", I: "Avanzo en todas a la vez de forma algo caótica.", S: "Sigo orden de llegada para no agobiarme.", C: "Categorizo por prioridad objetiva primero." } },
+        { q: "46. Al enseñar a alguien:", opts: { D: "Muestro el resultado y que descubra el camino.", I: "Lo hago dinámico y doy ánimos.", S: "Enseño con paciencia a su ritmo.", C: "Explico manual y reglas paso a paso." } },
+        { q: "47. En negociación complicada, tu arma es:", opts: { D: "Firmeza y enfoque en objetivos.", I: "Carisma y capacidad de persuasión.", S: "Empatía y búsqueda de beneficio mutuo.", C: "Preparación exhaustiva y datos." } },
+        { q: "48. Palabra que mejor te describe:", opts: { D: "Decidido.", I: "Sociable.", S: "Constante.", C: "Preciso." } },
+        { q: "49. Si te atacan profesionalmente:", opts: { D: "Ataco de vuelta con argumentos fuertes.", I: "Uso el humor para desviar atención.", S: "Cedo para evitar conflicto mayor.", C: "Me atrinchero en datos y pido pruebas." } },
+        { q: "50. Tu mayor aportación al equipo es:", opts: { D: "Impulso para lograr metas y decidir rápido.", I: "Creatividad, motivación y comunicación.", S: "Lealtad, armonía y apoyo incondicional.", C: "Orden, calidad, análisis y precisión." } }
+    ];
+
+    const blockSize = 5;
+    let currentBlock = 0;
+    let scores = { D: 0, I: 0, S: 0, C: 0 };
+    let userAnswers = {}; // Guarda respuestas para no perderlas
+
+    function startTest() {
+        document.getElementById('intro-screen').style.display = 'none';
+        document.getElementById('test-screen').style.display = 'block';
+        renderBlock();
+    }
+
+    function renderBlock() {
+        const container = document.getElementById('questions-container');
+        container.innerHTML = '';
+        
+        document.getElementById('block-title').innerText = `Bloque ${currentBlock + 1}/${Math.ceil(allQuestions.length / blockSize)}`;
+        document.getElementById('progress').style.width = `${(currentBlock / (allQuestions.length / blockSize)) * 100}%`;
+
+        const startIdx = currentBlock * blockSize;
+        const endIdx = startIdx + blockSize;
+        const currentQuestions = allQuestions.slice(startIdx, endIdx);
+
+        currentQuestions.forEach((qObj, index) => {
+            const globalIndex = startIdx + index;
+            const qDiv = document.createElement('div');
+            qDiv.className = 'question-block';
+            
+            let html = `<h3>${qObj.q}</h3><div class="options">`;
+            
+            // Mezclar opciones de forma estática pero aleatoria visualmente (simplificado para el ejemplo)
+            const traits = Object.keys(qObj.opts);
+            traits.forEach(trait => {
+                const isChecked = userAnswers[globalIndex] === trait ? 'checked' : '';
+                html += `
+                    <label class="option-label">
+                        <input type="radio" name="q${globalIndex}" value="${trait}" onchange="checkBlockCompletion()" ${isChecked}>
+                        ${qObj.opts[trait]}
+                    </label>
+                `;
+            });
+            html += `</div>`;
+            qDiv.innerHTML = html;
+            container.appendChild(qDiv);
+        });
+        
+        checkBlockCompletion();
+    }
+
+    function checkBlockCompletion() {
+        const startIdx = currentBlock * blockSize;
+        const endIdx = Math.min(startIdx + blockSize, allQuestions.length);
+        let allAnswered = true;
+
+        for (let i = startIdx; i < endIdx; i++) {
+            const selected = document.querySelector(`input[name="q${i}"]:checked`);
+            if (selected) {
+                userAnswers[i] = selected.value;
+            } else {
+                allAnswered = false;
+            }
+        }
+        
+        const btn = document.getElementById('next-btn');
+        btn.disabled = !allAnswered;
+        btn.innerText = (currentBlock === (allQuestions.length / blockSize) - 1) ? 'Ver Resultados' : 'Siguiente Bloque';
+    }
+
+    function nextBlock() {
+        currentBlock++;
+        if (currentBlock * blockSize >= allQuestions.length) {
+            calculateResults();
+        } else {
+            renderBlock();
+        }
+    }
+
+    function calculateResults() {
+        // Tally scores
+        for (const key in userAnswers) {
+            scores[userAnswers[key]]++;
+        }
+
+        const total = allQuestions.length;
+        const results = [
+            { id: 'Rojo (Dominancia)', color: 'rojo', score: (scores.D / total) * 100, val: scores.D, desc: 'Enfoque a resultados, rapidez, liderazgo, control.' },
+            { id: 'Amarillo (Influencia)', color: 'amarillo', score: (scores.I / total) * 100, val: scores.I, desc: 'Enfoque a personas, entusiasmo, sociabilidad.' },
+            { id: 'Verde (Estabilidad)', color: 'verde', score: (scores.S / total) * 100, val: scores.S, desc: 'Enfoque a consenso, calma, apoyo al equipo.' },
+            { id: 'Azul (Meticulosidad)', color: 'azul', score: (scores.C / total) * 100, val: scores.C, desc: 'Enfoque a calidad, datos, procesos, lógica.' }
+        ].sort((a, b) => b.score - a.score);
+
+        document.getElementById('test-screen').style.display = 'none';
+        document.getElementById('results-screen').style.display = 'block';
+
+        const chart = document.getElementById('chart-container');
+        results.forEach(r => {
+            chart.innerHTML += `
+                <div class="result-bar">
+                    <div class="result-label">${r.id} (${Math.round(r.score)}%)</div>
+                    <div class="result-track">
+                        <div class="result-fill bg-${r.color}" style="width: ${r.score}%"></div>
+                    </div>
+                </div>
+            `;
+        });
+
+        generateAnalysis(results);
+    }
+
+    function generateAnalysis(sortedResults) {
+        const primary = sortedResults[0];
+        const secondary = sortedResults[1];
+        
+        let text = `<h2>Tu Perfil Principal: ${primary.id}</h2>`;
+        text += `<p>Tu comportamiento dominante está guiado por la necesidad de <strong>${primary.id.split(' ')[1].replace(/[()]/g, '')}</strong>. Tu perfil secundario es <strong>${secondary.id}</strong>, lo que matiza tu forma de interactuar.</p>`;
+        
+        if (primary.color === 'rojo') {
+            text += `<h3>Puntos Fuertes</h3><ul><li>Toma de decisiones resolutiva y directa.</li><li>Orientación a la excelencia y a superar retos.</li><li>Autonomía total y pragmatismo técnico.</li></ul>`;
+            text += `<h3>Áreas de mejora</h3><ul><li>Falta de tacto o exceso de dureza con perfiles más sensibles.</li><li>Impaciencia ante la lentitud de procesos burocráticos.</li></ul>`;
+        } else if (primary.color === 'amarillo') {
+            text += `<h3>Puntos Fuertes</h3><ul><li>Gran carisma, habilidades sociales y capacidad de persuasión.</li><li>Creatividad innata y generación de buen clima laboral.</li><li>Optimismo frente a los cambios.</li></ul>`;
+            text += `<h3>Áreas de mejora</h3><ul><li>Dificultad con el seguimiento exhaustivo de tareas rutinarias.</li><li>Tendencia a la desorganización o a perder el foco por exceso de optimismo.</li></ul>`;
+        } else if (primary.color === 'verde') {
+            text += `<h3>Puntos Fuertes</h3><ul><li>Alta empatía, lealtad y capacidad para generar consenso.</li><li>Excelente capacidad de escucha y paciencia.</li><li>Fiabilidad y constancia en tareas a largo plazo.</li></ul>`;
+            text += `<h3>Áreas de mejora</h3><ul><li>Resistencia al cambio y miedo a la inestabilidad.</li><li>Dificultad para confrontar conflictos de manera directa.</li></ul>`;
+        } else {
+            text += `<h3>Puntos Fuertes</h3><ul><li>Rigor técnico, precisión y alta calidad de trabajo.</li><li>Análisis objetivo basado en datos irrefutables.</li><li>Capacidad para prever riesgos antes de que ocurran.</li></ul>`;
+            text += `<h3>Áreas de mejora</h3><ul><li>Parálisis por análisis: tardar demasiado en decidir por querer hacerlo perfecto.</li><li>Dificultad para lidiar con instrucciones ambiguas.</li></ul>`;
+        }
+        
+        document.getElementById('profile-analysis').innerHTML = text;
+    }
+</script>
+</body>
+</html>
